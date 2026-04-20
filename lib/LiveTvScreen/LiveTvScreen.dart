@@ -33,10 +33,7 @@ class _LiveTvScreenState extends ConsumerState<LiveTvScreen> {
     return AppBar(
       title: const Text(
         "Live TV",
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
       ),
       backgroundColor: Colors.black.withOpacity(0.95),
       elevation: 0,
@@ -69,30 +66,28 @@ class _BodyContent extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         // Featured Banner Sliver
-        SliverToBoxAdapter(
-          child: _FeaturedBanner(channels: channels),
-        ),
-        
+        SliverToBoxAdapter(child: _FeaturedBanner(channels: channels)),
+
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        
+
         // Recommended Section
         _SectionSlider(
           title: "Recommended for You",
           channels: channels,
           icon: Icons.trending_up,
         ),
-        
+
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        
+
         // Popular Section
         _SectionSlider(
           title: "Most Popular",
           channels: channels.reversed.toList(),
           icon: Icons.whatshot,
         ),
-        
+
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        
+
         // Recently Added Section (if you have data)
         if (channels.length > 10)
           _SectionSlider(
@@ -100,7 +95,7 @@ class _BodyContent extends StatelessWidget {
             channels: channels.sublist(0, 10),
             icon: Icons.fiber_new,
           ),
-        
+
         const SliverToBoxAdapter(child: SizedBox(height: 80)),
       ],
     );
@@ -129,9 +124,10 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
 
     _pageController = PageController();
 
-    _initVideo(widget.channels[_currentIndex]);
-
-    _startAutoSlide();
+    if (widget.channels.isNotEmpty) {
+      _initVideo(widget.channels[_currentIndex]);
+      _startAutoSlide();
+    }
   }
 
   void _initVideo(channel) {
@@ -139,18 +135,18 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
 
     _videoController = VideoPlayerController.network(channel.streamUrl)
       ..initialize().then((_) {
+        if (!mounted) return;
         setState(() {});
-        _videoController!.setVolume(0); // mute autoplay
+        _videoController!.setVolume(0);
         _videoController!.play();
       });
   }
 
   void _startAutoSlide() {
     _timer = Timer.periodic(const Duration(seconds: 8), (timer) {
-      if (!mounted) return;
+      if (!mounted || widget.channels.isEmpty) return;
 
-      _currentIndex =
-          (_currentIndex + 1) % widget.channels.length;
+      _currentIndex = (_currentIndex + 1) % widget.channels.length;
 
       _pageController.animateToPage(
         _currentIndex,
@@ -168,6 +164,32 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
     _pageController.dispose();
     _videoController?.dispose();
     super.dispose();
+  }
+
+  Widget _buildDefaultLogo() {
+    return Container(
+      color: Colors.black,
+      child: const Center(
+        child: Icon(
+          Icons.tv,
+          color: Colors.red,
+          size: 50,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(channel) {
+    if (channel.logoUrl != null &&
+        channel.logoUrl.toString().isNotEmpty) {
+      return Image.network(
+        channel.logoUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildDefaultLogo(),
+      );
+    } else {
+      return _buildDefaultLogo();
+    }
   }
 
   @override
@@ -200,78 +222,99 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
                   ),
                 );
               },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 🔥 Video Background
-                    _videoController != null &&
-                            _videoController!.value.isInitialized &&
-                            index == _currentIndex
-                        ? FittedBox(
-                            fit: BoxFit.cover,
-                            child: SizedBox(
-                              width: _videoController!.value.size.width,
-                              height: _videoController!.value.size.height,
-                              child: VideoPlayer(_videoController!),
-                            ),
-                          )
-                        : Image.network(
-                            channel.logoUrl,
-                            fit: BoxFit.cover,
-                          ),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.red,
+                    width: 3,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.6),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 🔥 Video or Image
+                      _videoController != null &&
+                              _videoController!.value.isInitialized &&
+                              index == _currentIndex
+                          ? FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width:
+                                    _videoController!.value.size.width,
+                                height:
+                                    _videoController!.value.size.height,
+                                child: VideoPlayer(_videoController!),
+                              ),
+                            )
+                          : _buildImage(channel),
 
-                    // Gradient
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.8),
-                            Colors.transparent,
+                      // Gradient overlay
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.8),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Info
+                      Positioned(
+                        bottom: 20,
+                        left: 20,
+                        right: 20,
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding:
+                                  const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius:
+                                    BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                "LIVE",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              channel.name ?? "No Name",
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-
-                    // Info
-                    Positioned(
-                      bottom: 20,
-                      left: 20,
-                      right: 20,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              "LIVE",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            channel.name,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -281,21 +324,23 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
     );
   }
 }
+
 class _SectionSlider extends StatelessWidget {
   final String title;
   final List channels;
   final IconData icon;
-  
+
   const _SectionSlider({
     required this.title,
     required this.channels,
     required this.icon,
   });
-  
+
   @override
   Widget build(BuildContext context) {
-    if (channels.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-    
+    if (channels.isEmpty)
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +383,9 @@ class _SectionSlider extends StatelessWidget {
                 final channel = channels[index];
                 return _ChannelCard(
                   channel: channel,
-                  viewCount: (index + 1) * 100, // Pass viewCount instead of using index inside
+                  viewCount:
+                      (index + 1) *
+                      100, // Pass viewCount instead of using index inside
                 );
               },
             ),
@@ -348,129 +395,186 @@ class _SectionSlider extends StatelessWidget {
     );
   }
 }
-
-class _ChannelCard extends StatelessWidget {
+class _ChannelCard extends StatefulWidget {
   final dynamic channel;
   final int viewCount;
-  
+
   const _ChannelCard({
     required this.channel,
     required this.viewCount,
   });
-  
+
+  @override
+  State<_ChannelCard> createState() => _ChannelCardState();
+}
+class _ChannelCardState extends State<_ChannelCard>
+    with SingleTickerProviderStateMixin {
+  bool _isVisible = false;
+
+  // 🔥 Default Image
+  Widget _defaultImage() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.black, Colors.grey.shade900],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.live_tv,
+          color: Colors.red,
+          size: 45,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    if (widget.channel.logoUrl != null &&
+        widget.channel.logoUrl.toString().isNotEmpty) {
+      return Image.network(
+        widget.channel.logoUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (_, __, ___) => _defaultImage(),
+      );
+    } else {
+      return _defaultImage();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // delay for animation trigger
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() {
+          _isVisible = true;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => VideoPlayerLiveScreen(
-              url: channel.streamUrl,
-              title: channel.name,
-            ),
+    return TweenAnimationBuilder(
+      duration: const Duration(milliseconds: 400),
+      tween: Tween<double>(
+        begin: 0.9,
+        end: _isVisible ? 1.0 : 0.9,
+      ),
+      curve: Curves.easeOut,
+      builder: (context, double scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: _isVisible ? 1 : 0,
+            child: child,
           ),
         );
       },
-      child: Container(
-        width: 120,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  children: [
-                    Image.network(
-                      channel.logoUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.grey[900],
-                        child: const Icon(
-                          Icons.tv,
-                          color: Colors.grey,
-                          size: 40,
-                        ),
-                      ),
-                    ),
-                    // Gradient overlay on hover effect
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.6),
-                            ],
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => VideoPlayerLiveScreen(
+                url: widget.channel.streamUrl,
+                title: widget.channel.name,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: 120,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.red, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      _buildImage(),
+
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.6),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    // Play icon overlay
-                    const Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Colors.red,
-                        child: Icon(
-                          Icons.play_arrow,
-                          size: 16,
-                          color: Colors.white,
+
+                      const Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.red,
+                          child: Icon(
+                            Icons.play_arrow,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Channel Name
-            Text(
-              channel.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            // Metadata
-            Row(
-              children: [
-                const Icon(
-                  Icons.visibility,
-                  size: 10,
-                  color: Colors.white54,
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  "$viewCount",
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 10,
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                widget.channel.name ?? "No Name",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 2),
+
+              Row(
+                children: [
+                  const Icon(Icons.visibility,
+                      size: 10, color: Colors.white54),
+                  const SizedBox(width: 2),
+                  Text(
+                    "${widget.viewCount}",
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 10),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
 class _LoadingWidget extends StatelessWidget {
   const _LoadingWidget();
-  
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -494,20 +598,16 @@ class _LoadingWidget extends StatelessWidget {
 
 class _ErrorWidget extends ConsumerWidget {
   final String error;
-  
+
   const _ErrorWidget({required this.error});
-  
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.grey[600],
-          ),
+          Icon(Icons.error_outline, size: 64, color: Colors.grey[600]),
           const SizedBox(height: 16),
           Text(
             "Failed to load channels",
