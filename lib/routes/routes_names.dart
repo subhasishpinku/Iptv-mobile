@@ -11,6 +11,9 @@ class RouteNames {
   static const String movieScreen = "movie_screen";
   static const String liveTvScreen = "live_tv_screen";
   static const String movieDetailsScreen = "movie_details_screen";
+  static const String planScreen = "plan_screen";
+  static const String musicScreen = "music_screen";
+  static const String musicPlayerScreen = "music_player_screen";
 
 
 }

@@ -5,6 +5,7 @@ import 'package:iptvmobile/HomeScreen/MovieDetailsScreen/movie_Details_Screen.da
 import 'package:iptvmobile/HomeScreen/movie_model.dart';
 import 'package:iptvmobile/HomeScreen/providers/providers.dart';
 import 'package:iptvmobile/VideoPlayerScreen/video_player_screen.dart';
+import 'package:iptvmobile/routes/routes_names.dart';
 
 class Homescreen extends ConsumerStatefulWidget {
   const Homescreen({super.key});
@@ -17,7 +18,7 @@ class _HomescreenState extends ConsumerState<Homescreen> {
   int _currentPage = 0;
   Timer? _timer;
   bool _isAutoSliding = true;
-
+  bool _isFabOpen = false; // ✅ HERE
   @override
   void initState() {
     super.initState();
@@ -58,6 +59,29 @@ class _HomescreenState extends ConsumerState<Homescreen> {
     _startAutoSlide();
   }
 
+  Widget _fabItem(IconData icon, String label, VoidCallback onTap) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(label),
+        ),
+        const SizedBox(width: 8),
+        FloatingActionButton(
+          mini: true,
+          backgroundColor: Colors.green,
+          onPressed: onTap,
+          child: Icon(icon, color: Colors.white),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -68,9 +92,9 @@ class _HomescreenState extends ConsumerState<Homescreen> {
   @override
   Widget build(BuildContext context) {
     final movieState = ref.watch(homeProvider);
-
     return Scaffold(
       backgroundColor: Colors.black,
+
       body: movieState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -93,21 +117,14 @@ class _HomescreenState extends ConsumerState<Homescreen> {
               await ref.read(homeProvider.notifier).fetchMovies();
             },
             child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(), // 👈 IMPORTANT
-
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-
-                  // 🔥 Banner
                   _buildBannerCarousel(movies),
-
                   const SizedBox(height: 20),
-
                   _buildSection("Trending Movies", movies),
-
                   const SizedBox(height: 20),
-
                   _buildSection("Upcoming Movies", movies.reversed.toList()),
                 ],
               ),
@@ -115,6 +132,41 @@ class _HomescreenState extends ConsumerState<Homescreen> {
           );
         },
       ),
+
+      /// ✅ CORRECT PLACE
+      // floatingActionButton: Column(
+      //   mainAxisSize: MainAxisSize.min,
+      //   crossAxisAlignment: CrossAxisAlignment.end,
+      //   children: [
+      //     if (_isFabOpen) ...[
+      //       _fabItem(Icons.music_note, "Music", () {
+      //         Navigator.pushNamed(context, RouteNames.musicScreen);
+
+      //         print("Music Clicked");
+      //       }),
+      //       const SizedBox(height: 10),
+      //       _fabItem(Icons.playlist_play, "Playlist", () {
+      //         print("Playlist Clicked");
+      //       }),
+      //       const SizedBox(height: 10),
+      //       _fabItem(Icons.favorite, "Favorites", () {
+      //         print("Favorites Clicked");
+      //       }),
+      //       const SizedBox(height: 10),
+      //     ],
+
+      //     FloatingActionButton(
+      //       backgroundColor: Colors.red,
+      //       onPressed: () {
+      //         setState(() => _isFabOpen = !_isFabOpen);
+      //       },
+      //       child: Icon(
+      //         _isFabOpen ? Icons.close : Icons.menu,
+      //         color: Colors.white,
+      //       ),
+      //     ),
+      //   ],
+      // ),
     );
   }
 

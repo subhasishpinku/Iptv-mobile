@@ -97,6 +97,29 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
     setState(() {});
   }
 
+  Widget _buildSeekBar() {
+    final value = widget.controller.value;
+
+    /// ✅ SAFE CHECK
+    if (!value.isInitialized || value.duration == Duration.zero) {
+      return const SizedBox();
+    }
+
+    final position = value.position;
+    final duration = value.duration;
+
+    return Slider(
+      min: 0,
+      max: duration.inSeconds.toDouble(),
+      value: position.inSeconds.clamp(0, duration.inSeconds).toDouble(),
+      activeColor: Colors.red,
+      inactiveColor: Colors.white38,
+      onChanged: (val) {
+        widget.controller.seekTo(Duration(seconds: val.toInt()));
+      },
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -157,63 +180,146 @@ class _FullScreenPlayerState extends State<FullScreenPlayer> {
                   ),
                 ),
               ),
+            if (!_showControls)
+              Positioned(
+                bottom: 15,
+                right: 15,
+                child: Opacity(
+                  opacity: 0.7,
+                  child: Image.asset('assets/images/logo.png', width: 80, height: 80),
+                ),
+              ),
 
             /// 🎮 VIDEO CONTROLS (Skip, Play/Pause)
+            /// /// 🎮 VIDEO CONTROLS + SEEKBAR
             if (_showControls)
               Positioned(
-                bottom: 30,
+                bottom: 5,
                 left: 0,
                 right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _controlIcon(
-                      Icons.replay_10,
-                      onTap: () {
-                        final pos = widget.controller.value.position;
-                        widget.controller.seekTo(
-                          pos - const Duration(seconds: 10),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 20),
+                    /// 🔻 SEEK BAR
+                    _buildSeekBar(),
 
-                    _controlIcon(
-                      widget.controller.value.isPlaying
-                          ? Icons.pause
-                          : Icons.play_arrow,
-                      onTap: () {
-                        setState(() {
+                    const SizedBox(height: 10),
+
+                    /// 🔘 CONTROLS
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _controlIcon(
+                          Icons.replay_10,
+                          onTap: () {
+                            final pos = widget.controller.value.position;
+                            widget.controller.seekTo(
+                              pos - const Duration(seconds: 10),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 20),
+
+                        _controlIcon(
                           widget.controller.value.isPlaying
-                              ? widget.controller.pause()
-                              : widget.controller.play();
-                        });
-                      },
-                    ),
+                              ? Icons.pause
+                              : Icons.play_arrow,
+                          onTap: () {
+                            setState(() {
+                              widget.controller.value.isPlaying
+                                  ? widget.controller.pause()
+                                  : widget.controller.play();
+                            });
+                          },
+                        ),
 
-                    const SizedBox(width: 20),
+                        const SizedBox(width: 20),
 
-                    _controlIcon(
-                      Icons.forward_10,
-                      onTap: () {
-                        final pos = widget.controller.value.position;
-                        widget.controller.seekTo(
-                          pos + const Duration(seconds: 10),
-                        );
-                      },
+                        _controlIcon(
+                          Icons.forward_10,
+                          onTap: () {
+                            final pos = widget.controller.value.position;
+                            widget.controller.seekTo(
+                              pos + const Duration(seconds: 10),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+            // if (_showControls)
+            //   Positioned(
+            //     bottom: 30,
+            //     left: 0,
+            //     right: 0,
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.center,
+            //       children: [
+            //         _controlIcon(
+            //           Icons.replay_10,
+            //           onTap: () {
+            //             final pos = widget.controller.value.position;
+            //             widget.controller.seekTo(
+            //               pos - const Duration(seconds: 10),
+            //             );
+            //           },
+            //         ),
+            //         const SizedBox(width: 20),
+
+            //         _controlIcon(
+            //           widget.controller.value.isPlaying
+            //               ? Icons.pause
+            //               : Icons.play_arrow,
+            //           onTap: () {
+            //             setState(() {
+            //               widget.controller.value.isPlaying
+            //                   ? widget.controller.pause()
+            //                   : widget.controller.play();
+            //             });
+            //           },
+            //         ),
+
+            //         const SizedBox(width: 20),
+
+            //         _controlIcon(
+            //           Icons.forward_10,
+            //           onTap: () {
+            //             final pos = widget.controller.value.position;
+            //             widget.controller.seekTo(
+            //               pos + const Duration(seconds: 10),
+            //             );
+            //           },
+            //         ),
+            //       ],
+            //     ),
+            //   ),
 
             /// 🔙 BACK BUTTON
             if (_showControls)
               Positioned(
                 top: 20,
                 left: 10,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(
+                        255,
+                        255,
+                        252,
+                        252,
+                      ).withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.black,
+                      size: 30,
+                    ),
+                  ),
                 ),
               ),
 

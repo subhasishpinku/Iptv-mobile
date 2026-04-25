@@ -30,13 +30,13 @@ class _LoginscreenState extends ConsumerState<Loginscreen> {
     if (authState.isAuthenticated) {
       // Already authenticated, go to dashboard
       if (mounted) {
-        Navigator.pushReplacementNamed(context, RouteNames.dashBoardScreenn);
+        Navigator.pushReplacementNamed(context, RouteNames.planScreen);
       }
     } else {
       // Check token in storage
       final isLoggedIn = await ref.read(authStateProvider.notifier).checkAuthStatus();
       if (isLoggedIn && mounted) {
-        Navigator.pushReplacementNamed(context, RouteNames.dashBoardScreenn);
+        Navigator.pushReplacementNamed(context, RouteNames.planScreen);
       }
     }
     

@@ -169,19 +169,12 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
   Widget _buildDefaultLogo() {
     return Container(
       color: Colors.black,
-      child: const Center(
-        child: Icon(
-          Icons.tv,
-          color: Colors.red,
-          size: 50,
-        ),
-      ),
+      child: const Center(child: Icon(Icons.tv, color: Colors.red, size: 50)),
     );
   }
 
   Widget _buildImage(channel) {
-    if (channel.logoUrl != null &&
-        channel.logoUrl.toString().isNotEmpty) {
+    if (channel.logoUrl != null && channel.logoUrl.toString().isNotEmpty) {
       return Image.network(
         channel.logoUrl,
         fit: BoxFit.cover,
@@ -212,22 +205,29 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
             padding: const EdgeInsets.all(16),
             child: GestureDetector(
               onTap: () {
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (_) => VideoPlayerLiveScreen(
+                //       url: channel.streamUrl,
+                //       title: channel.name,
+                //     ),
+
+                //   ),
+                // );
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => VideoPlayerLiveScreen(
-                      url: channel.streamUrl,
-                      title: channel.name,
+                      channels: widget.channels, // ✅ FIX
+                      currentIndex: index, // ✅ FIX
                     ),
                   ),
                 );
               },
               child: Container(
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.red,
-                    width: 3,
-                  ),
+                  border: Border.all(color: Colors.red, width: 3),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -249,10 +249,8 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
                           ? FittedBox(
                               fit: BoxFit.cover,
                               child: SizedBox(
-                                width:
-                                    _videoController!.value.size.width,
-                                height:
-                                    _videoController!.value.size.height,
+                                width: _videoController!.value.size.width,
+                                height: _videoController!.value.size.height,
                                 child: VideoPlayer(_videoController!),
                               ),
                             )
@@ -278,19 +276,16 @@ class _FeaturedBannerState extends State<_FeaturedBanner> {
                         left: 20,
                         right: 20,
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.red,
-                                borderRadius:
-                                    BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Text(
                                 "LIVE",
@@ -381,11 +376,12 @@ class _SectionSlider extends StatelessWidget {
               itemCount: channels.length > 10 ? 10 : channels.length,
               itemBuilder: (context, index) {
                 final channel = channels[index];
+
                 return _ChannelCard(
+                  channels: channels, // ✅ ADD
+                  index: index, // ✅ ADD
                   channel: channel,
-                  viewCount:
-                      (index + 1) *
-                      100, // Pass viewCount instead of using index inside
+                  viewCount: (index + 1) * 100,
                 );
               },
             ),
@@ -395,11 +391,16 @@ class _SectionSlider extends StatelessWidget {
     );
   }
 }
+
 class _ChannelCard extends StatefulWidget {
+  final List channels; // ✅ ADD
+  final int index; // ✅ ADD
   final dynamic channel;
   final int viewCount;
 
   const _ChannelCard({
+    required this.channels,
+    required this.index,
     required this.channel,
     required this.viewCount,
   });
@@ -407,6 +408,7 @@ class _ChannelCard extends StatefulWidget {
   @override
   State<_ChannelCard> createState() => _ChannelCardState();
 }
+
 class _ChannelCardState extends State<_ChannelCard>
     with SingleTickerProviderStateMixin {
   bool _isVisible = false;
@@ -416,16 +418,10 @@ class _ChannelCardState extends State<_ChannelCard>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.black, Colors.grey.shade900],
-        ),
+        gradient: LinearGradient(colors: [Colors.black, Colors.grey.shade900]),
       ),
       child: const Center(
-        child: Icon(
-          Icons.live_tv,
-          color: Colors.red,
-          size: 45,
-        ),
+        child: Icon(Icons.live_tv, color: Colors.red, size: 45),
       ),
     );
   }
@@ -462,31 +458,35 @@ class _ChannelCardState extends State<_ChannelCard>
   Widget build(BuildContext context) {
     return TweenAnimationBuilder(
       duration: const Duration(milliseconds: 400),
-      tween: Tween<double>(
-        begin: 0.9,
-        end: _isVisible ? 1.0 : 0.9,
-      ),
+      tween: Tween<double>(begin: 0.9, end: _isVisible ? 1.0 : 0.9),
       curve: Curves.easeOut,
       builder: (context, double scale, child) {
         return Transform.scale(
           scale: scale,
-          child: Opacity(
-            opacity: _isVisible ? 1 : 0,
-            child: child,
-          ),
+          child: Opacity(opacity: _isVisible ? 1 : 0, child: child),
         );
       },
       child: GestureDetector(
         onTap: () {
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (_) => VideoPlayerLiveScreen(
+          //       url: widget.channel.streamUrl,
+          //       title: widget.channel.name,
+          //     ),
+          //   ),
+          // );
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => VideoPlayerLiveScreen(
-                url: widget.channel.streamUrl,
-                title: widget.channel.name,
+                channels: widget.channels, // ✅ FIX
+                currentIndex: widget.index, // ✅ FIX
               ),
             ),
           );
+             
         },
         child: Container(
           width: 120,
@@ -555,13 +555,11 @@ class _ChannelCardState extends State<_ChannelCard>
 
               Row(
                 children: [
-                  const Icon(Icons.visibility,
-                      size: 10, color: Colors.white54),
+                  const Icon(Icons.visibility, size: 10, color: Colors.white54),
                   const SizedBox(width: 2),
                   Text(
                     "${widget.viewCount}",
-                    style: const TextStyle(
-                        color: Colors.white54, fontSize: 10),
+                    style: const TextStyle(color: Colors.white54, fontSize: 10),
                   ),
                 ],
               ),
@@ -572,6 +570,7 @@ class _ChannelCardState extends State<_ChannelCard>
     );
   }
 }
+
 class _LoadingWidget extends StatelessWidget {
   const _LoadingWidget();
 

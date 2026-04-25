@@ -15,14 +15,19 @@ class BuildMyNavBar extends StatelessWidget {
       "active": Icons.home_filled,
       "inactive": Icons.home_outlined,
     },
+     {
+      "active": Icons.live_tv,
+      "inactive": Icons.live_tv_outlined,
+    },
+      {
+    "active": Icons.music_note,
+    "inactive": Icons.music_note_outlined,
+  },
     {
       "active": Icons.movie,
       "inactive": Icons.movie_outlined,
     },
-    {
-      "active": Icons.live_tv,
-      "inactive": Icons.live_tv_outlined,
-    },
+   
     {
       "active": Icons.category,
       "inactive": Icons.category_outlined,
@@ -41,23 +46,42 @@ class BuildMyNavBar extends StatelessWidget {
             topRight: Radius.circular(20),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(navItems.length, (index) {
-            return IconButton(
-              onPressed: () => onPageSelected(index),
-              icon: Icon(
-                pageIndex == index
-                    ? navItems[index]["active"]
-                    : navItems[index]["inactive"],
-                color: pageIndex == index
-                    ? Colors.white
-                    : Colors.white.withOpacity(0.6),
-                size: 30,
-              ),
-            );
-          }),
+child: Row(
+  mainAxisAlignment: MainAxisAlignment.spaceAround,
+  children: [
+    // Left (2 items)
+    for (int i = 0; i < 2; i++)
+      IconButton(
+        onPressed: () => onPageSelected(i),
+        icon: Icon(
+          pageIndex == i
+              ? navItems[i]["active"]
+              : navItems[i]["inactive"],
+          color: pageIndex == i
+              ? Colors.white
+              : Colors.white.withOpacity(0.6),
+          size: 30,
         ),
+      ),
+
+    const SizedBox(width: 60), // 👈 FAB gap
+
+    // Right (3 items)
+    for (int i = 2; i < 5; i++) // ✅ FIXED
+      IconButton(
+        onPressed: () => onPageSelected(i),
+        icon: Icon(
+          pageIndex == i
+              ? navItems[i]["active"]
+              : navItems[i]["inactive"],
+          color: pageIndex == i
+              ? Colors.white
+              : Colors.white.withOpacity(0.6),
+          size: 30,
+        ),
+      ),
+  ],
+),
       ),
     );
   }

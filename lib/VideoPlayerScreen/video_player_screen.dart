@@ -15,33 +15,28 @@ class VideoPlayerScreen extends StatefulWidget {
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late VideoPlayerController _videoController;
 
-  // Brightness
+  // Brightness & Volume
   double _brightness = 1.0;
-  bool _showBrightnessControl = false;
-  double _startY = 0;
-  double _startBrightness = 1.0;
-  bool _isDraggingRightSide = false;
-
-  // Volume
   double _volume = 1.0;
-  bool _showVolumeControl = false;
-  double _startVolume = 1.0;
-  bool _isDraggingLeftSide = false;
 
-  // UI visibility
+  double _startY = 0;
+  double _currentBrightness = 1.0;
+  double _currentVolume = 1.0;
+
+  bool _showOverlay = false;
+  bool _isVolume = false;
+
   bool _showControls = true;
 
   @override
   void initState() {
     super.initState();
 
-    // Landscape mode
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
 
-    // Full screen
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     _videoController =
@@ -64,21 +59,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   void _togglePlay() {
     setState(() {
-      if (_videoController.value.isPlaying) {
-        _videoController.pause();
-      } else {
-        _videoController.play();
-      }
+      _videoController.value.isPlaying
+          ? _videoController.pause()
+          : _videoController.play();
     });
   }
 
   void _toggleControlsVisibility() {
-    setState(() {
-      _showControls = !_showControls;
-    });
+    setState(() => _showControls = !_showControls);
   }
 
-  // 🎯 Gesture START
+  // 🎯 Gesture
   void _handleVerticalDragStart(DragStartDetails details) {
     final screenWidth = MediaQuery.of(context).size.width;
     final dragX = details.globalPosition.dx;
@@ -86,59 +77,112 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _startY = details.globalPosition.dy;
 
     if (dragX > screenWidth / 2) {
-      // RIGHT → Brightness
-      _isDraggingRightSide = true;
-      _isDraggingLeftSide = false;
-
-      _startBrightness = _brightness;
-
-      setState(() => _showBrightnessControl = true);
+      // 👉 RIGHT SIDE → VOLUME
+      _isVolume = true;
+      _currentVolume = _volume;
     } else {
-      // LEFT → Volume
-      _isDraggingLeftSide = true;
-      _isDraggingRightSide = false;
-
-      _startVolume = _volume;
-
-      setState(() => _showVolumeControl = true);
+      // 👉 LEFT SIDE → BRIGHTNESS
+      _isVolume = false;
+      _currentBrightness = _brightness;
     }
+
+    setState(() => _showOverlay = true);
   }
 
   void _handleVerticalDragUpdate(DragUpdateDetails details) {
     final deltaY = details.globalPosition.dy - _startY;
+    final change = -deltaY / 500;
 
-    if (_isDraggingRightSide) {
-      final change = -deltaY / 500;
-      _brightness = (_startBrightness + change).clamp(0.2, 1.0);
-      setState(() {});
-    }
-
-    if (_isDraggingLeftSide) {
-      final change = -deltaY / 500;
-      _volume = (_startVolume + change).clamp(0.0, 1.0);
-
+    if (_isVolume) {
+      _volume = (_currentVolume + change).clamp(0.0, 1.0);
       _videoController.setVolume(_volume);
-      setState(() {});
+    } else {
+      _brightness = (_currentBrightness + change).clamp(0.2, 1.0);
     }
+
+    setState(() {});
   }
 
   void _handleVerticalDragEnd(DragEndDetails details) {
-    setState(() {
-      _showBrightnessControl = false;
-      _showVolumeControl = false;
-    });
+    setState(() => _showOverlay = false);
+  }
 
-    _isDraggingRightSide = false;
-    _isDraggingLeftSide = false;
+  // 🔥 Side Indicator
+  Widget _sideIndicator(
+    IconData icon,
+    double value,
+    Color color,
+    double screenHeight,
+  ) {
+    double barHeight = screenHeight * 0.25;
+
+    return Container(
+      width: 60,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(height: 10),
+          Container(
+            width: 4,
+            height: barHeight,
+            color: Colors.white24,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: barHeight * value,
+                width: 4,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "${(value * 100).toInt()}%",
+            style: const TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeekBar() {
+    final value = _videoController.value;
+
+    /// SAFE CHECK
+    if (!value.isInitialized || value.duration == Duration.zero) {
+      return const SizedBox();
+    }
+
+    final position = value.position;
+    final duration = value.duration;
+
+    return Slider(
+      min: 0,
+      max: duration.inSeconds.toDouble(),
+      value: position.inSeconds.clamp(0, duration.inSeconds).toDouble(),
+      activeColor: Colors.red,
+      inactiveColor: Colors.white38,
+      onChanged: (val) {
+        _videoController.seekTo(Duration(seconds: val.toInt()));
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 🎬 VIDEO + GESTURE
+          /// 🎬 VIDEO
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onVerticalDragStart: _handleVerticalDragStart,
@@ -160,51 +204,69 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   : const CircularProgressIndicator(),
             ),
           ),
-
-          // 👉 LEFT indicator
-          if (_isDraggingLeftSide)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                width: 5,
-                color: Colors.white.withOpacity(0.3),
+          if (_showControls)
+            Positioned(
+              bottom: 10,
+              right: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/logo.png', // 👉 তোমার logo path
+                    width: 80,
+                    height: 80,
+                  ),
+                  // const SizedBox(height: 4),
+                  // const Text(
+                  //   'Left: Brightness\nRight: Volume',
+                  //   textAlign: TextAlign.center,
+                  //   style: TextStyle(
+                  //     color: Colors.white70,
+                  //     fontSize: 10,
+                  //     height: 1.2,
+                  //   ),
+                  // ),
+                ],
               ),
             ),
 
-          // 👉 RIGHT indicator
-          if (_isDraggingRightSide)
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                width: 5,
-                color: Colors.white.withOpacity(0.3),
-              ),
-            ),
-
-          // 🔊 VOLUME UI
-          if (_showVolumeControl && _isDraggingLeftSide)
+          /// ☀️ BRIGHTNESS
+          if (_showOverlay && !_isVolume)
             Positioned(
               left: 20,
-              top: MediaQuery.of(context).size.height / 2 - 100,
-              child: _volumeUI(),
+              top: screenHeight * 0.2,
+              child: _sideIndicator(
+                Icons.brightness_6,
+                _brightness,
+                Colors.amber,
+                screenHeight,
+              ),
             ),
 
-          // 🔆 BRIGHTNESS UI
-          if (_showBrightnessControl && _isDraggingRightSide)
+          /// 🔊 VOLUME
+          if (_showOverlay && _isVolume)
             Positioned(
               right: 20,
-              top: MediaQuery.of(context).size.height / 2 - 100,
-              child: _brightnessUI(),
+              top: screenHeight * 0.2,
+              child: _sideIndicator(
+                Icons.volume_up,
+                _volume,
+                Colors.blue,
+                screenHeight,
+              ),
             ),
 
-          // 🔙 Back
+          /// 🔙 BACK
           if (_showControls)
             Positioned(
               top: 30,
               left: 10,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back,
-                    color: Colors.white, size: 30),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 30,
+                ),
                 onPressed: () {
                   _videoController.pause();
                   Navigator.pop(context);
@@ -212,33 +274,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ),
             ),
 
-          // ▶ PLAY BUTTON (Center)
+          /// ▶ PLAY BUTTON
           if (_showControls && !_videoController.value.isPlaying)
-            Positioned.fill(
-              child: Center(
-                child: GestureDetector(
-                  onTap: _togglePlay,
-                  child: AnimatedOpacity(
-                    opacity: _videoController.value.isPlaying ? 0.0 : 1.0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black54,
-                      ),
-                      padding: const EdgeInsets.all(15),
-                      child: const Icon(
-                        Icons.play_arrow,
-                        color: Colors.white,
-                        size: 50,
-                      ),
-                    ),
+            Center(
+              child: GestureDetector(
+                onTap: _togglePlay,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black54,
+                  ),
+                  padding: const EdgeInsets.all(15),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    color: Colors.white,
+                    size: 50,
                   ),
                 ),
               ),
             ),
 
-          // 🎮 VIDEO CONTROLS (Skip, Play/Pause)
+          /// 🎮 CONTROLS
           if (_showControls)
             Positioned(
               bottom: 30,
@@ -247,61 +303,40 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _controlIcon(
-                    Icons.replay_10,
-                    onTap: () {
-                      final pos = _videoController.value.position;
-                      _videoController.seekTo(pos - const Duration(seconds: 10));
-                    },
-                  ),
+                  _controlIcon(Icons.replay_10, () {
+                    final pos = _videoController.value.position;
+                    _videoController.seekTo(pos - const Duration(seconds: 10));
+                  }),
                   const SizedBox(width: 20),
                   _controlIcon(
-                    _videoController.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                    onTap: _togglePlay,
+                    _videoController.value.isPlaying
+                        ? Icons.pause
+                        : Icons.play_arrow,
+                    _togglePlay,
                     size: 45,
                   ),
                   const SizedBox(width: 20),
-                  _controlIcon(
-                    Icons.forward_10,
-                    onTap: () {
-                      final pos = _videoController.value.position;
-                      _videoController.seekTo(pos + const Duration(seconds: 10));
-                    },
-                  ),
+                  _controlIcon(Icons.forward_10, () {
+                    final pos = _videoController.value.position;
+                    _videoController.seekTo(pos + const Duration(seconds: 10));
+                  }),
                 ],
               ),
             ),
 
-          // 📌 Instruction + Logo
           if (_showControls)
             Positioned(
-              bottom: 10,
-              right: 20,
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    width: 70,
-                    height: 70,
-                  ),
-                  const Text(
-                    'Left: Volume\nRight: Brightness',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ),
+              bottom: 5, // 👈 controls এর উপরে
+              left: 0,
+              right: 0,
+              child: _buildSeekBar(),
             ),
         ],
       ),
     );
   }
 
-  Widget _controlIcon(IconData icon, {required VoidCallback onTap, double size = 35}) {
+  Widget _controlIcon(IconData icon, VoidCallback onTap, {double size = 35}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -310,67 +345,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           color: Colors.black54,
         ),
         padding: const EdgeInsets.all(10),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: size,
-        ),
-      ),
-    );
-  }
-
-  // 🔊 Volume UI
-  Widget _volumeUI() {
-    return Container(
-      width: 60,
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.volume_up, color: Colors.white),
-          const SizedBox(height: 10),
-          Text('${(_volume * 100).toInt()}%',
-              style: const TextStyle(color: Colors.white)),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 100,
-            child: RotatedBox(
-              quarterTurns: 1,
-              child: LinearProgressIndicator(value: _volume),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🔆 Brightness UI
-  Widget _brightnessUI() {
-    return Container(
-      width: 60,
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.brightness_6, color: Colors.white),
-          const SizedBox(height: 10),
-          Text('${(_brightness * 100).toInt()}%',
-              style: const TextStyle(color: Colors.white)),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 100,
-            child: RotatedBox(
-              quarterTurns: 1,
-              child: LinearProgressIndicator(value: _brightness),
-            ),
-          ),
-        ],
+        child: Icon(icon, color: Colors.white, size: size),
       ),
     );
   }

@@ -276,7 +276,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
 
     if (success && mounted) {
       print("✅ OTP Verified Successfully!");
-      Navigator.pushReplacementNamed(context, RouteNames.dashBoardScreenn);
+      Navigator.pushReplacementNamed(context, RouteNames.planScreen);
     } else if (mounted) {
       final error = ref.read(authStateProvider).error;
       print("❌ OTP Verification Failed: $error");
