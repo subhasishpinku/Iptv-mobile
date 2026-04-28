@@ -7,12 +7,13 @@ import 'package:iptvmobile/MovieScreen/MovieScreen.dart';
 import 'package:iptvmobile/MusicScreen/MusicScreen.dart';
 import 'package:iptvmobile/OtpScreen.dart/providers/auth_provider.dart';
 import 'package:iptvmobile/ScannerScreen/mobile_scanner.dart';
+import 'package:iptvmobile/routes/routes_names.dart';
 import 'package:iptvmobile/widgets/CustomDrawer.dart';
 import 'package:iptvmobile/widgets/duildMyNavBar.dart';
 
 class Dashboard extends ConsumerStatefulWidget {
   const Dashboard({super.key});
-  
+
   @override
   ConsumerState<Dashboard> createState() => _DashboardState();
 }
@@ -36,48 +37,47 @@ class _DashboardState extends ConsumerState<Dashboard> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).user;
-    
+
     return Scaffold(
-  appBar: AppBar(
-  title: const Text(""),
-  centerTitle: true,
-  backgroundColor: Colors.red,
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.qr_code_scanner),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const ScannerScreen(),
+      appBar: AppBar(
+        title: const Text(""),
+        centerTitle: true,
+        backgroundColor: Colors.red,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ScannerScreen()),
+              );
+            },
           ),
-        );
-      },
-    ),
-  ],
-),
+        ],
+      ),
 
-  body: pages[pageIndex],
+      body: pages[pageIndex],
 
-  floatingActionButton: FloatingActionButton(
-    onPressed: () {
-      print("Plus Clicked");
-    },
-    backgroundColor: Colors.red,
-    child: const Icon(Icons.add),
-  ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          print("Plus Clicked");
+          Navigator.pushNamed(context, RouteNames.reelScreen);
+        },
+        backgroundColor: Colors.red,
+        child: const Icon(Icons.add),
+      ),
 
-  floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-  bottomNavigationBar: BuildMyNavBar(
-    pageIndex: pageIndex,
-    onPageSelected: _onPageSelected,
-  ),
+      bottomNavigationBar: BuildMyNavBar(
+        pageIndex: pageIndex,
+        onPageSelected: _onPageSelected,
+      ),
 
-  drawer: CustomDrawer(
-    userName: user?.name ?? "User",
-    userMobile: user?.mobile ?? "",
-  ),
-);
+      drawer: CustomDrawer(
+        userName: user?.name ?? "User",
+        userMobile: user?.mobile ?? "",
+      ),
+    );
   }
 }

@@ -14,6 +14,5 @@ class RouteNames {
   static const String planScreen = "plan_screen";
   static const String musicScreen = "music_screen";
   static const String musicPlayerScreen = "music_player_screen";
-
-
+  static const String reelScreen = "reel_screen";
 }

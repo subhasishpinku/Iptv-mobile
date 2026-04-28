@@ -11,6 +11,7 @@ import 'package:iptvmobile/MusicScreen/MusicPlayerScreen.dart';
 import 'package:iptvmobile/MusicScreen/MusicScreen.dart';
 import 'package:iptvmobile/OtpScreen.dart/OtpScreen.dart';
 import 'package:iptvmobile/PlanScreen/PlanScreen.dart';
+import 'package:iptvmobile/ReelScreen/ReelScreen.dart';
 import 'package:iptvmobile/SingnupScreen/SingnupScreen.dart';
 import 'package:iptvmobile/SplashScreen/SplashScreen.dart';
 import 'package:iptvmobile/dashboard.dart';
@@ -80,7 +81,10 @@ class Routes {
       //   return MaterialPageRoute(
       //     builder: (BuildContext context) => const MovieDetailsScreen(movie: movie),
       //   );
-
+      case (RouteNames.reelScreen):
+        return MaterialPageRoute(
+          builder: (BuildContext context) => const ReelScreen(),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => const Scaffold(
