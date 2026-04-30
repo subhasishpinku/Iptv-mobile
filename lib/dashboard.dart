@@ -20,18 +20,36 @@ class Dashboard extends ConsumerStatefulWidget {
 
 class _DashboardState extends ConsumerState<Dashboard> {
   int pageIndex = 0;
-  final List<Widget> pages = [
-    const Homescreen(),
-    const LiveTvScreen(),
-    const MusicScreen(),
-    const MovieScreen(),
-    const Categoriesscreen(),
+
+  final List<Widget> pages = const [
+    Homescreen(),
+    LiveTvScreen(),
+    MusicScreen(),
+    MovieScreen(),
+    Categoriesscreen(),
   ];
 
   void _onPageSelected(int index) {
-    setState(() {
-      pageIndex = index;
-    });
+    if (index == 2) {
+      // 🎬 Reels → Full screen open (NO navbar)
+      Navigator.pushNamed(context, RouteNames.reelScreen);
+      return;
+    }
+
+    // 👉 Fix index (because reels not in pages)
+    final newIndex = index > 2 ? index - 1 : index;
+
+    if (newIndex != pageIndex) {
+      setState(() {
+        pageIndex = newIndex;
+      });
+    }
+  }
+
+  /// 👉 Navbar highlight fix (Reels should never stay selected)
+  int get selectedIndex {
+    if (pageIndex >= 2) return pageIndex + 1;
+    return pageIndex;
   }
 
   @override
@@ -58,19 +76,8 @@ class _DashboardState extends ConsumerState<Dashboard> {
 
       body: pages[pageIndex],
 
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          print("Plus Clicked");
-          Navigator.pushNamed(context, RouteNames.reelScreen);
-        },
-        backgroundColor: Colors.red,
-        child: const Icon(Icons.add),
-      ),
-
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
       bottomNavigationBar: BuildMyNavBar(
-        pageIndex: pageIndex,
+        pageIndex: selectedIndex, // 👈 IMPORTANT FIX
         onPageSelected: _onPageSelected,
       ),
 

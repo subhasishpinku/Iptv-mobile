@@ -10,29 +10,73 @@ class BuildMyNavBar extends StatelessWidget {
     required this.onPageSelected,
   });
 
-  final List<Map<String, IconData>> navItems = const [
+  final List<Map<String, dynamic>> navItems = const [
     {
       "active": Icons.home_filled,
       "inactive": Icons.home_outlined,
+      "label": "Home",
     },
-     {
+    {
       "active": Icons.live_tv,
       "inactive": Icons.live_tv_outlined,
+      "label": "Live",
     },
-      {
-    "active": Icons.music_note,
-    "inactive": Icons.music_note_outlined,
-  },
+
+    // 👇 NEW (Reels)
+    {
+      "active": Icons.play_circle_fill,
+      "inactive": Icons.play_circle_outline,
+      "label": "Reels",
+    },
+
+    {
+      "active": Icons.music_note,
+      "inactive": Icons.music_note_outlined,
+      "label": "Music",
+    },
     {
       "active": Icons.movie,
       "inactive": Icons.movie_outlined,
+      "label": "Movies",
     },
-   
     {
       "active": Icons.category,
       "inactive": Icons.category_outlined,
+      "label": "Category",
     },
   ];
+
+Widget buildNavItem(int i) {
+  bool isSelected = pageIndex == i;
+
+  return GestureDetector(
+    onTap: () => onPageSelected(i),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center, // 👈 ADD THIS
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isSelected ? navItems[i]["active"] : navItems[i]["inactive"],
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+          size: 24,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          navItems[i]["label"],
+          textAlign: TextAlign.center, // 👈 ADD THIS
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : Colors.white.withOpacity(0.6),
+            fontSize: 11, // 👈 slightly smaller for 6 items
+            fontWeight:
+                isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -46,42 +90,10 @@ class BuildMyNavBar extends StatelessWidget {
             topRight: Radius.circular(20),
           ),
         ),
-child: Row(
-  mainAxisAlignment: MainAxisAlignment.spaceAround,
-  children: [
-    // Left (2 items)
-    for (int i = 0; i < 2; i++)
-      IconButton(
-        onPressed: () => onPageSelected(i),
-        icon: Icon(
-          pageIndex == i
-              ? navItems[i]["active"]
-              : navItems[i]["inactive"],
-          color: pageIndex == i
-              ? Colors.white
-              : Colors.white.withOpacity(0.6),
-          size: 30,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [for (int i = 0; i < navItems.length; i++) buildNavItem(i)],
         ),
-      ),
-
-    const SizedBox(width: 60), // 👈 FAB gap
-
-    // Right (3 items)
-    for (int i = 2; i < 5; i++) // ✅ FIXED
-      IconButton(
-        onPressed: () => onPageSelected(i),
-        icon: Icon(
-          pageIndex == i
-              ? navItems[i]["active"]
-              : navItems[i]["inactive"],
-          color: pageIndex == i
-              ? Colors.white
-              : Colors.white.withOpacity(0.6),
-          size: 30,
-        ),
-      ),
-  ],
-),
       ),
     );
   }
