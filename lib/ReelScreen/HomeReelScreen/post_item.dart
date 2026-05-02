@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:iptvmobile/ReelScreen/HomeReelScreen/CommentSheet.dart';
+import 'package:iptvmobile/ReelScreen/HomeReelScreen/ShareSheet.dart';
 import 'package:iptvmobile/ReelScreen/HomeReelScreen/VideoDetailsScreen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -11,11 +13,18 @@ class PostItem extends StatefulWidget {
   State<PostItem> createState() => _PostItemState();
 }
 
-class _PostItemState extends State<PostItem> with AutomaticKeepAliveClientMixin {
+class _PostItemState extends State<PostItem>
+    with AutomaticKeepAliveClientMixin {
   late VideoPlayerController _videoController;
+
   bool _isVideoInitialized = false;
   bool _isPlaying = false;
   bool isMuted = true;
+
+  // ❤️ Like system
+  bool isLiked = false;
+  bool showHeart = false;
+  int likeCount = 0; // For dynamic like count
 
   @override
   bool get wantKeepAlive => widget.post["type"] == "video";
@@ -23,18 +32,21 @@ class _PostItemState extends State<PostItem> with AutomaticKeepAliveClientMixin 
   @override
   void initState() {
     super.initState();
+    likeCount = widget.post["likes"]; // Initialize like count from post data
+
     if (widget.post["type"] == "video") {
       _videoController = VideoPlayerController.networkUrl(
         Uri.parse(widget.post["media"]),
       );
+
       _videoController.initialize().then((_) {
         if (mounted) {
           setState(() {
             _isVideoInitialized = true;
           });
+
           _videoController.setLooping(true);
-          _videoController.setVolume(0.0); // Start muted
-          // Don't auto-play, let visibility detector handle it
+          _videoController.setVolume(0.0);
         }
       });
     }
@@ -48,58 +60,74 @@ class _PostItemState extends State<PostItem> with AutomaticKeepAliveClientMixin 
     super.dispose();
   }
 
-  void _togglePlayPause() {
-    if (_isVideoInitialized) {
-      setState(() {
-        if (_videoController.value.isPlaying) {
-          _videoController.pause();
-          _isPlaying = false;
-        } else {
-          _videoController.play();
-          _isPlaying = true;
-        }
-      });
+  // 🎯 Visibility control
+  void _onVisibilityChanged(VisibilityInfo info) {
+    if (!_isVideoInitialized || !mounted) return;
+
+    double visible = info.visibleFraction * 100;
+
+    if (visible > 60) {
+      if (!_videoController.value.isPlaying) {
+        _videoController.play();
+        setState(() => _isPlaying = true);
+      }
+    } else {
+      if (_videoController.value.isPlaying) {
+        _videoController.pause();
+        setState(() => _isPlaying = false);
+      }
     }
   }
 
-  // In _PostItemState, fix the visibility logic - add a check for mounted
-void _onVisibilityChanged(VisibilityInfo info) {
-  if (!_isVideoInitialized || !mounted) return;
-  
-  double visiblePercentage = info.visibleFraction * 100;
-  
-  if (visiblePercentage > 60) {
-    // Video is more than 60% visible - play it
-    if (!_videoController.value.isPlaying) {
-      _videoController.play();
-      if (mounted) {
-        setState(() {
-          _isPlaying = true;
+  // ❤️ Toggle like - works for both single tap on icon AND double tap on media
+  void _toggleLike() {
+    setState(() {
+      if (isLiked) {
+        // Unlike: decrease count and set isLiked to false
+        isLiked = false;
+        likeCount--;
+      } else {
+        // Like: increase count and set isLiked to true
+        isLiked = true;
+        likeCount++;
+        
+        // Show heart animation only when liking (not when unliking)
+        showHeart = true;
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            setState(() => showHeart = false);
+          }
         });
       }
-    }
-  } else {
-    // Video is less than 60% visible - pause it
-    if (_videoController.value.isPlaying) {
-      _videoController.pause();
-      if (mounted) {
-        setState(() {
-          _isPlaying = false;
-        });
-      }
-    }
+    });
   }
-}
+
+  // ❤️ Double tap handler (only shows heart animation, uses same toggle logic)
+  void _handleDoubleTap() {
+    if (!isLiked) {
+      // Only show heart animation if actually liking
+      setState(() {
+        showHeart = true;
+      });
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          setState(() => showHeart = false);
+        }
+      });
+    }
+    _toggleLike(); // Toggle the like state
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Container(
       color: Colors.black,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          /// 🔝 Header
           ListTile(
             leading: CircleAvatar(
               backgroundImage: NetworkImage(widget.post["profile"]),
@@ -114,45 +142,31 @@ void _onVisibilityChanged(VisibilityInfo info) {
             trailing: const Icon(Icons.more_vert, color: Colors.white),
           ),
 
-          // Media Player (Video or Image) with Visibility Detector for videos
+          /// 🎬 Media Section
           widget.post["type"] == "video"
               ? VisibilityDetector(
-                  key: Key(widget.post["media"].toString()),
+                  key: Key(widget.post["media"]),
                   onVisibilityChanged: _onVisibilityChanged,
                   child: GestureDetector(
                     onTap: () {
-                      // Mute/unmute video when tapping on the video player
-                      if (_isVideoInitialized) {
-                        setState(() {
-                          isMuted = !isMuted;
-                          _videoController.setVolume(isMuted ? 0.0 : 1.0);
-                        });
-                      }
-                    },
-                    onDoubleTap: () {
-                      // Navigate to full screen on double tap
-                      if (_isVideoInitialized) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => VideoDetailsScreen(
-                              videoUrl: widget.post["media"],
-                              username: widget.post["username"],
-                              caption: widget.post["caption"],
-                              profile: widget.post["profile"],
-                            ),
+                      // 👉 Single tap → Details Screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VideoDetailsScreen(
+                            videoUrl: widget.post["media"],
+                            username: widget.post["username"],
+                            caption: widget.post["caption"],
+                            profile: widget.post["profile"],
                           ),
-                        ).then((_) {
-                          // Resume playback when returning from full screen if still visible
-                          if (_videoController.value.isPlaying) {
-                            _videoController.pause();
-                          }
-                        });
-                      }
+                        ),
+                      );
                     },
+                    onDoubleTap: _handleDoubleTap, // 🔥 Double tap to like/unlike
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
+                        /// 🎥 Video
                         Container(
                           height: 300,
                           width: double.infinity,
@@ -165,22 +179,21 @@ void _onVisibilityChanged(VisibilityInfo info) {
                                   ),
                                 ),
                         ),
-                        
-                        // Play/Pause Button
-                        // if (_isVideoInitialized)
-                        //   Container(
-                        //     decoration: BoxDecoration(
-                        //       color: Colors.black.withOpacity(0.5),
-                        //       shape: BoxShape.circle,
-                        //     ),
-                        //     child: Icon(
-                        //       _isPlaying ? Icons.pause : Icons.play_arrow,
-                        //       color: Colors.white,
-                        //       size: 50,
-                        //     ),
-                        //   ),
-                        
-                        // Video Indicator Badge
+
+                        /// ❤️ Heart Animation
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: showHeart ? 1 : 0,
+                          child: IgnorePointer(
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Colors.red,
+                              size: 100,
+                            ),
+                          ),
+                        ),
+
+                        /// 🎬 Badge (Video)
                         Positioned(
                           top: 8,
                           right: 8,
@@ -194,20 +207,26 @@ void _onVisibilityChanged(VisibilityInfo info) {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Row(
-                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.videocam, color: Colors.white, size: 14),
+                                Icon(
+                                  Icons.videocam,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   "VIDEO",
-                                  style: TextStyle(color: Colors.white, fontSize: 10),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        
-                        // Volume/Mute Button
+
+                        /// 🔊 Volume Button
                         Positioned(
                           bottom: 10,
                           right: 10,
@@ -227,7 +246,6 @@ void _onVisibilityChanged(VisibilityInfo info) {
                               child: Icon(
                                 isMuted ? Icons.volume_off : Icons.volume_up,
                                 color: Colors.white,
-                                size: 20,
                               ),
                             ),
                           ),
@@ -236,46 +254,81 @@ void _onVisibilityChanged(VisibilityInfo info) {
                     ),
                   ),
                 )
+              /// 🖼️ Image
               : GestureDetector(
+                  onDoubleTap: _handleDoubleTap, // 🔥 Double tap to like/unlike
                   onTap: () {
-                    // For images, you could add navigation or other actions
+                    // Optional: Add image details screen if needed
                   },
-                  child: Image.network(
-                    widget.post["media"],
-                    height: 300,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.network(
+                        widget.post["media"],
                         height: 300,
-                        color: Colors.grey,
-                        child: const Center(
-                          child: Icon(Icons.broken_image, color: Colors.white),
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+
+                      /// ❤️ Heart Animation (same as video)
+                      AnimatedOpacity(
+                        duration: const Duration(milliseconds: 300),
+                        opacity: showHeart ? 1 : 0,
+                        child: IgnorePointer(
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 100,
+                          ),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          /// ❤️ Actions Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                Icon(Icons.favorite_border, color: Colors.white),
-                SizedBox(width: 12),
-                Icon(Icons.chat_bubble_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Icon(Icons.send, color: Colors.white),
-                Spacer(),
-                Icon(Icons.bookmark_border, color: Colors.white),
+                // 🔥 Like Button with Icon (Single tap to toggle like/unlike)
+                GestureDetector(
+                  onTap: _toggleLike, // 🔥 Single tap on icon toggles like/unlike
+                  child: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: isLiked ? Colors.red : Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () {
+                    _openComments(context);
+                  },
+                  child: const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () {
+                    _openShareSheet(context);
+                  },
+                  child: const Icon(Icons.send, color: Colors.white, size: 26),
+                ),
+                const Spacer(),
+                const Icon(Icons.bookmark_border, color: Colors.white, size: 26),
               ],
             ),
           ),
 
+          /// 👍 Likes Count (Dynamic)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
-              "${widget.post["likes"]} likes",
+              likeCount == 0 ? "Be the first to like this" : "$likeCount likes",
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -283,8 +336,7 @@ void _onVisibilityChanged(VisibilityInfo info) {
             ),
           ),
 
-          const SizedBox(height: 4),
-
+          /// 📝 Caption
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text.rich(
@@ -306,8 +358,7 @@ void _onVisibilityChanged(VisibilityInfo info) {
             ),
           ),
 
-          const SizedBox(height: 4),
-
+          /// ⏱ Time
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
@@ -321,8 +372,34 @@ void _onVisibilityChanged(VisibilityInfo info) {
       ),
     );
   }
-}
 
+  void _openComments(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return const CommentSheet();
+      },
+    );
+  }
+
+  void _openShareSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return const ShareSheet();
+      },
+    );
+  }
+}
 // class PostItem extends StatefulWidget {
 //   final Map<String, dynamic> post;
 //   const PostItem({super.key, required this.post});
